@@ -1,83 +1,65 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+use std::io::{self, Write};
 
-use std::io;
+use crossterm::{
+    cursor::{self, Hide, Show},
+    execute,
+    terminal::{self, Clear, ClearType},
+};
 
-fn main() {
-    let mut board = [' '; 9];
+use tic_tac_toe::screen;
 
-    let players = ['X', 'O'];
+fn main() -> io::Result<()> {
+    terminal::enable_raw_mode()?;
 
-    let mut turn = 0;
+    let mut stdout = io::stdout();
 
-    print_board(board);
+    // hide cursor
+    execute!(stdout, Hide)?;
 
     loop {
-        println!("Enter position for {}", players[turn]);
+        // clear screen
+        execute!(
+            stdout,
+            cursor::MoveTo(0, 0),
+            Clear(ClearType::All),
+            Clear(ClearType::Purge)
+        )?;
 
-        let index = get_index_from_input();
+        stdout.flush()?;
 
-        if let Err(reason) = index {
-            println!("{reason}");
-            continue;
-        }
+        let (human_player, continue_game) = screen::choose_player()?;
 
-        let index = index.unwrap();
-
-        if let None = index {
+        if !continue_game {
             break;
         }
 
-        let index = index.unwrap();
+        let (winning_player, board, continue_game) = screen::game_play(&human_player)?;
 
-        if board[index] != ' ' {
-            println!("The cell at position {} is already occupied", index + 1);
-            continue;
+        if !continue_game {
+            break;
         }
 
-        board[index] = players[turn];
+        let continue_game = screen::end_menu(&winning_player, &human_player, &board)?;
 
-        turn = (turn + 1) % 2;
-
-        print_board(board);
-    }
-}
-
-fn print_board(board: [char; 9]) {
-    println!(
-        "
-  +---+---+---+
-  | {} | {} | {} |
-  +---+---+---+
-  | {} | {} | {} |
-  +---+---+---+
-  | {} | {} | {} |
-  +---+---+---+
-  ",
-        board[0], board[1], board[2], board[3], board[4], board[5], board[6], board[7], board[8]
-    );
-}
-
-fn get_index_from_input() -> Result<Option<usize>, String> {
-    let mut input = String::new();
-
-    io::stdin()
-        .read_line(&mut input)
-        .map_err(|e| e.to_string())?;
-
-    let input = input.trim();
-
-    if input == "quit" {
-        return Ok(None);
+        if !continue_game {
+            break;
+        }
     }
 
-    let input = input
-        .parse::<usize>()
-        .map_err(|_| "Your input should be a positive number".to_string())?;
+    // clear screen
+    execute!(
+        stdout,
+        cursor::MoveTo(0, 0),
+        Clear(ClearType::All),
+        Clear(ClearType::Purge)
+    )?;
 
-    if input < 1 || input > 9 {
-        return Err(format!("The position should be a number from 1 to 9"));
-    }
+    // display cursor
+    execute!(stdout, Show)?;
 
-    Ok(Some(input - 1))
+    stdout.flush()?;
+
+    terminal::disable_raw_mode()?;
+
+    Ok(())
 }
