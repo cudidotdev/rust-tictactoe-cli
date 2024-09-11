@@ -80,7 +80,7 @@ pub fn game_play(human_player: &Player) -> io::Result<(Option<Player>, [char; 9]
             loop {
                 tabs.next();
 
-                // if there no empty cell or the current cell is empty terminate the loop
+                // if there's no empty cell or the current cell is empty terminate the loop
                 if !board.contains(&' ') || board[*tabs.value()] == ' ' {
                     break;
                 }
